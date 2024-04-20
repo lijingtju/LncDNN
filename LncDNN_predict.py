@@ -142,6 +142,8 @@ def process_sequences(input_file, output_file, length=277):
             outfile.write(f"{processed_sequence}\n")
 
 def main(data_path, file_name, output_path, outputfile):
+    os.makedirs(current_path + "features", exist_ok=True)
+
     process_sequences(data_path + file_name, data_path + file_name[:-6]+"_277.fasta")
     file_key_name = file_name[:-6]+"_277"
     csv_file_name = file_key_name+ ".csv"
@@ -151,10 +153,10 @@ def main(data_path, file_name, output_path, outputfile):
     kmer(fasta, path_fea+file_key_name+"_kmer.csv")
     print('kmer end.......')
 
-    fw = open(current_path+'/features_code/PseinOne2/command_RNA.sh', 'w')
+    fw = open(current_path+'/PseinOne2/command_RNA.sh', 'w')
     fw.write(
-        'python '+current_path+'/features_code/PseinOne2/acc.py '+current_path+'/data/'+file_name+' RNA NMBAC -out '+path_fea+file_key_name+'_NMBAC.txt\n'
-        'python '+current_path+'/features_code/PseinOne2/pse.py '+current_path+'/data/'+file_name+' RNA PC-PseDNC-General -out '+path_fea+file_key_name+'_PC-PseDNC-General.txt'
+        'python '+current_path+'/PseinOne2/acc.py '+current_path+'/data/'+file_name+' RNA NMBAC -out '+path_fea+file_key_name+'_NMBAC.txt\n'
+        'python '+current_path+'/PseinOne2/pse.py '+current_path+'/data/'+file_name+' RNA PC-PseDNC-General -out '+path_fea+file_key_name+'_PC-PseDNC-General.txt'
         )
     fw.close()
     os.system("bash "+current_path+'/features_code/PseinOne2/command_RNA.sh')
