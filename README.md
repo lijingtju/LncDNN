@@ -1,6 +1,6 @@
 # LncDNN
 This repository contains machine learning models and prediction code for LncDNN. Users can utilize LncDNN to predict the localization of lncRNA (just for Nucleolus or Nucleoplasm).
-![flowchart BstEP.](https://github.com/lijingtju/LncDNN/blob/main/data_process_LncDNN.png)
+![flowchart BstEP.](https://github.com/lijingtju/LncDNN/blob/main/data_process.png)
 
 ## Requirements
 At the moment, a standard machine with CPUs will work.
