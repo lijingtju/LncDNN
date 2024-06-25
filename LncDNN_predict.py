@@ -5,8 +5,11 @@ import itertools
 from collections import Counter
 import pandas as pd
 from Bio import SeqIO
+from collections import Counter
+import numpy as np
+import pandas as pd
 
-# 定义函数将txt文件转换为csv文件
+
 def txt_to_csv(txt_file, csv_file):
     # 读取txt文件
     df = pd.read_csv(txt_file, sep='\t', header=None)
@@ -32,72 +35,41 @@ def fastaTOcsv(fasta_file, csv_file):
     df = pd.DataFrame(data)
     df.to_csv(csv_file, index=False)
 
-def kmerArray(sequence, k):
-    kmer = []
-    for i in range(len(sequence) - k + 1):
-        kmer.append(sequence[i:i + k])
-    return kmer
-
-def kmer(fastas, output_file):
-    k = 4
-    type = "RNA"
-    upto = False
-    normalize = True
-    encoding = []
-    # header = ['#', 'label']
-    header = ['Sequence', 'Cytoplasm', 'Nucleus', 'Exosome', 'Chromatin']
-    NA = 'ACGU'
-    if type in ("DNA_features", 'RNA'):
-        NA = 'ACGT'
-    else:
-        NA = 'ACDEFGHIKLMNPQRSTVWY'
-
-    if k < 1:
-        print('Error: the k-mer value should larger than 0.')
+def ENAC(fastas, window=5):
+    if window < 1:
+        print('Error: the sliding window should be greater than zero' + '\n\n')
         return 0
-
-    if upto == True:
-        for tmpK in range(1, k + 1):
-            for kmer in itertools.product(NA, repeat=tmpK):
-                header.append(''.join(kmer))
-        encoding.append(header)
-        for i in fastas:
-            name, sequence, label = i[0], re.sub('-', '', i[1]), i[2]
-            count = Counter()
-            for tmpK in range(1, k + 1):
-                kmers = kmerArray(sequence, tmpK)
-                count.update(kmers)
-                if normalize == True:
-                    for key in count:
-                        if len(key) == tmpK:
-                            count[key] = count[key] / len(kmers)
-            code = [name, label]
-            for j in range(2, len(header)):
-                if header[j] in count:
-                    code.append(count[header[j]])
-                else:
-                    code.append(0)
-            encoding.append(code)
-    else:
-        for kmer in itertools.product(NA, repeat=k):
-            header.append(''.join(kmer))
-
-        for i in fastas:
-            sequence = i.strip()
-            kmers = kmerArray(sequence, k)
-            count = Counter()
-            count.update(kmers)
-            if normalize == True:
+    AA = 'ACGU'
+    encodings = []
+    for i in fastas:
+        sequence = i.strip()
+        code = []
+        for j in range(len(sequence)):
+            if j < len(sequence) and j + window <= len(sequence):
+                count = Counter(sequence[j:j + window])
                 for key in count:
-                    count[key] = count[key] / len(kmers)
-            code = []
-            for j in range(2, len(header)):
-                if header[j] in count:
-                    code.append(count[header[j]])
-                else:
-                    code.append(0)
-            encoding.append(code)
-    pd.DataFrame(encoding).to_csv(output_file, header=None, index=False)
+                    count[key] = count[key] / len(sequence[j:j + window])
+                for aa in AA:
+                    code.append(count[aa])
+        encodings.append(code)
+    num_columns = len(encodings)
+    head = [f'ENAC.{i}' for i in range(num_columns)]
+    pd.DataFrame(encodings).to_csv(output_file, header=head, index=False)
+
+def ANF(fastas, output_file):
+    AA = 'ACGU'
+    encodings = []
+    for i in fastas:
+        sequence = i.strip()
+        code = []
+        for j in range(len(sequence)):
+            code.append(sequence[0: j + 1].count(sequence[j]) / (j + 1))
+        encodings.append(code)
+    print(len(encodings))
+    num_columns = len(encodings)
+    head = [f'ANF.{i}' for i in range(num_columns)]
+    pd.DataFrame(encodings).to_csv(output_file, header=head, index=False)
+
 
 def read_fasta(file):
     f = open(file)
@@ -122,57 +94,63 @@ def read_fasta(file):
     f.close()
     return fea
 
-def process_sequences(input_file, output_file, length=277):
-    with open(output_file, 'w') as outfile:
-        for record in SeqIO.parse(input_file, "fasta"):
-            sequence = str(record.seq)
-            if len(sequence) > length:
-                # 截断序列为指定长度
-                processed_sequence = sequence[:length]
-            elif len(sequence) < length:
-                # 补充序列为指定长度
-                padding = length - len(sequence)
-                processed_sequence = sequence + sequence[-padding:]
-            else:
-                # 序列长度已经符合要求，无需处理
-                processed_sequence = sequence
+def select_SHAP_column(concanate_file, SHAP_file):
+    columns_to_extract = {
+        concanate_file: ['ANF.82', 'ENAC,33', 'ANF.75', 'ANF.109','ENAC,171',
+                        'ENAC,164', 'ENAC,100', 'ENAC.3', 'ENAC.21','ANF.97',
+                        'ANF.117','ENAC,12',
+                                                     ],
+    }
 
-            # 将处理后的序列写入输出文件
-            outfile.write(f">{record.id}\n")
-            outfile.write(f"{processed_sequence}\n")
+
+    # 初始化一个空的DataFrame来存放提取的数据
+    combined_data = pd.DataFrame()
+
+
+    base_name = os.path.basename(concanate_file)
+
+    # 检查文件名是否在列名字典中
+    if base_name in columns_to_extract:
+        # 读取每个文件
+        df = pd.read_csv(concanate_file)
+        print(df.shape)
+
+        # 提取指定的列
+        extracted_columns = df[columns_to_extract[base_name]]
+        print(extracted_columns)
+        print(extracted_columns.shape)
+
+        # 将提取的列合并到总的DataFrame中
+        combined_data = pd.concat([combined_data, extracted_columns], axis=1)
+        print(combined_data.shape)
+
+
+    combined_data.to_csv(SHAP_file, index=False, header=True)
+
 
 def main(data_path, file_name, output_path, outputfile):
-    os.makedirs(current_path + "features", exist_ok=True)
-
-    process_sequences(data_path + file_name, data_path + file_name[:-6]+"_277.fasta")
-    file_key_name = file_name[:-6]+"_277"
+    file_key_name = file_name[:-6]+""
     csv_file_name = file_key_name+ ".csv"
     fastaTOcsv(data_path + file_name, data_path + csv_file_name)
     data = pd.read_csv(data_path + csv_file_name)
     fasta = read_fasta(fasta_file)
-    kmer(fasta, path_fea+file_key_name+"_kmer.csv")
-    print('kmer end.......')
+    ENAC(fasta, path_fea+file_key_name+"_ENAC.csv")
+    print('ENAC end.......')
+    ANF(fasta, path_fea + file_key_name + "_ANF.csv")
+    print('ANF end.......')
 
-    fw = open(current_path+'/PseinOne2/command_RNA.sh', 'w')
-    fw.write(
-        'python '+current_path+'/PseinOne2/acc.py '+current_path+'/data/'+file_name+' RNA NMBAC -out '+path_fea+file_key_name+'_NMBAC.txt\n'
-        'python '+current_path+'/PseinOne2/pse.py '+current_path+'/data/'+file_name+' RNA PC-PseDNC-General -out '+path_fea+file_key_name+'_PC-PseDNC-General.txt'
-        )
-    fw.close()
-    os.system("bash "+current_path+'/features_code/PseinOne2/command_RNA.sh')
-    print("bash "+current_path+'/features_code/PseinOne2/command_RNA.sh')
-    print('NMBAC and PC-PseDNC-General end.......')
-    txt_to_csv(path_fea + file_key_name + '_NMBAC.txt', path_fea + file_key_name + '_NMBAC.csv')
-    txt_to_csv(path_fea + file_key_name + '_PC-PseDNC-General.txt', path_fea + file_key_name + '_PC-PseDNC-General.csv')
+    ENAC_df = pd.read_csv('./features/' + file_key_name + '_ENAC.csv')
+    ANF_df = pd.read_csv("./features/" + file_key_name + "_ANF.csv")
 
-    NMBAC_df = pd.read_csv('./features/' + file_key_name + '_NMBAC.csv')
-    PC_PseDNC_df = pd.read_csv('./features/' + file_key_name + '_PC-PseDNC-General.csv')
-    kmer_df = pd.read_csv("./features/" + file_key_name + "_kmer.csv")
+    print(ENAC_df.shape, ANF_df.shape)
+    combined_features = pd.concat([ENAC_df, ANF_df], axis=1)
+    concanate_file = './features/'+ path_fea+file_key_name+'ENAC_ANF.csv'
+    combined_features.to_csv(concanate_file, index_label="index_label")
+    SHAP_fea_file = './features/'+ path_fea+file_key_name+'ENAC_ANF_SHAP.csv'
+    select_SHAP_column(concanate_file, SHAP_fea_file)
+    SHAP_fea = pd.read_csv(SHAP_fea_file)
 
-    print(kmer_df.shape, NMBAC_df.shape, PC_PseDNC_df.shape)
-    combined_features = pd.concat([kmer_df, NMBAC_df, PC_PseDNC_df], axis=1)
-
-    prob, pred = get_df_prob(combined_features)
+    prob, pred = get_df_prob(SHAP_fea)
     df_pred = pd.DataFrame(pred, columns=['predict_label'])
     df_prob = pd.DataFrame(prob, columns=['probility'])
     result_df = pd.concat([data, df_pred, df_prob], axis=1)
