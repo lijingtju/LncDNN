@@ -15,10 +15,6 @@ cd /path/to/LncDNN
 conda env create -f LncDNN.yml
 conda activate LncDNN
 mkdir features
-mkdir features_code
-cd features_code
-git clone https://github.com/banshanren/Pse-in-One-2.0.git
-cd ..
 ```
 
 
