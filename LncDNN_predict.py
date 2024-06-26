@@ -96,9 +96,9 @@ def read_fasta(file):
 
 def select_SHAP_column(concanate_file, SHAP_file):
     columns_to_extract = {
-        concanate_file: ['ANF.82', 'ENAC,33', 'ANF.75', 'ANF.109','ENAC,171',
-                        'ENAC,164', 'ENAC,100', 'ENAC.3', 'ENAC.21','ANF.97',
-                        'ANF.117','ENAC,12',
+        concanate_file: ['ANF.82', 'ENAC.33', 'ANF.75', 'ANF.109','ENAC.171',
+                        'ENAC.164', 'ENAC.100', 'ENAC.3', 'ENAC.21','ANF.97',
+                        'ANF.117','ENAC.12',
                                                      ],
     }
 
